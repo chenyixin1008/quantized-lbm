@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+	<meta charset="utf-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1"/>
+	<title>Quantized High-Performance High-Order Moment-Encoded LBM</title>
+	<meta name="author" content="Yixin Chen, Wei Li, David I.W. Levin, Kui Wu"/>
+	<meta property="og:image" content="https://chenyixin1008.github.io/quantized-lbm/teaser.jpg" />
+	<meta property="og:description" content="Lattice Boltzmann methods (LBM) are widely used for visually rich fluid simulation, but their high memory bandwidth and storage requirements limit GPU performance and scalability, especially when coupled with complex geometry. We present a high-performance, quantized high-order moment-encoded LBM (HOME-LBM) framework for large-scale turbulent fluid–solid simulations on a single GPU. A geometry-decoupled computation scheme separates the regular fluid update from a sparse solid-correction stage, and a stability-guided 16-bit representation halves moment storage. Across the tested benchmarks our framework substantially accelerates the original FP32 HOME-LBM implementation, with a maximum speedup of 32.5×, while maintaining numerical stability, fidelity, and high visual quality." />
+	<meta name="twitter:card" content="summary_large_image"/>
+	<meta name="og:title" content="Quantized High-Performance High-Order Moment-Encoded LBM"/>
+	<link type="text/css" rel="stylesheet" href="style.css"/>
+	<style>
+		/* page-specific tweaks; everything else comes from style.css */
+		figure { margin: 1.2em 0; }
+		figure img, figure video { display: block; width: 100%; height: auto; margin: auto; }
+		figure video { background-color: #000; }
+		figcaption { margin-top: 0.5em; font-size: 0.92em; line-height: 1.35; }
+		div.authors sup { font-size: 0.7em; }
+		div.authors .affil { font-size: 0.92em; }
+		div.authors .corr { font-size: 0.85em; color: #555; }
+		@media screen and (max-width: 960px) { body { width: auto; } }
+	</style>
+</head>
+<body>
+
+<h1 id="quantized_home_lbm">Quantized High-Performance High-Order Moment-Encoded LBM <em>(arXiv preprint, 2026)</em></h1>
+
+<div class=authors>
+  Yixin Chen<sup>1</sup>, Wei Li<sup>2,*</sup>, David I.W. Levin<sup>1,3</sup>, Kui Wu<sup>4</sup> <br><br>
+  <span class="affil">University of Toronto<sup>1</sup>, Shanghai Jiao Tong University<sup>2</sup>, NVIDIA<sup>3</sup>, LIGHTSPEED<sup>4</sup></span> <br>
+  <span class="corr"><sup>*</sup>Corresponding author</span>
+</div>
+
+<figure>
+<img src="teaser.jpg" alt="Teaser: turbulent smoke around an F1 car, fluid-only plumes at 1024^3, and jets through Hilbert-curve obstacles, simulated with our 16-bit quantized HOME-LBM solver.">
+</figure>
+
+<h2 id="abstract">Abstract</h2>
+
+<p>Lattice Boltzmann methods (LBM) are widely used for visually rich fluid simulation,
+  but their high memory bandwidth and storage requirements limit GPU performance and
+  scalability, especially when coupled with complex geometry. Recent high-order
+  moment-encoded LBM (HOME-LBM) reduces memory cost by storing compact velocity moments
+  and performing collision directly in moment space, but its tightly coupled boundary
+  treatment introduces divergent control flow. We present a high-performance, quantized
+  HOME-LBM framework for large-scale turbulent fluid&ndash;solid simulations on a single GPU.
+  Our geometry-decoupled computation scheme separates the regular fluid update from a
+  sparse solid-correction stage, isolating geometry-dependent computations to improve
+  GPU efficiency. To further reduce storage and memory traffic, we develop a
+  reduced-precision representation for HOME-LBM by combining von Neumann stability
+  analysis, empirical moment-range estimation, and runtime decomposition of second-order
+  moments to control quantization error. We evaluate our approach on real-time
+  demonstrations and large-scale examples using both D3Q19 and D3Q27 lattices, with
+  additional 2D and 3D numerical experiments assessing accuracy and stability. Across the
+  tested benchmarks, our framework substantially accelerates the original FP32 HOME-LBM
+  implementation, with a maximum speedup of 32.5&times; on the Hilbert-curve geometry.
+  Moment storage is reduced by 50% in fluid-only simulations and 25% in fluid&ndash;solid
+  coupling examples, while maintaining numerical stability, fidelity, and high visual
+  quality. In the static delta-wing benchmark, our solver achieves a 5.2&times; speedup
+  over Leapfrog Flow Maps (LFM) under the tested configuration.</p>
+
+<h2 id="videos">Videos</h2>
+
+<figure>
+<video controls muted loop playsinline preload="metadata">
+  <source src="videos/f1_annotated.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+<figcaption><strong>Formula 1 car.</strong> Turbulent wake around a 5.3M-triangle F1 car on a
+  1000&nbsp;&times;&nbsp;400&nbsp;&times;&nbsp;400 grid (160M lattice cells). The whole simulation takes 368&nbsp;s
+  and 9.1&nbsp;GB of GPU memory on a single NVIDIA RTX&nbsp;4090, 5.8&times; faster than the
+  original FP32 HOME-LBM [Li et al. 2023].</figcaption>
+</figure>
+
+<figure>
+<video controls muted loop playsinline preload="metadata">
+  <source src="videos/hilbert_levels_1_4.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+<figcaption><strong>Hilbert-curve obstacles.</strong> Jet flow through progressively refined 3D
+  space-filling Hilbert curves (levels 1&ndash;4, 15k to 145k triangles) on a
+  256&nbsp;&times;&nbsp;512&nbsp;&times;&nbsp;256 grid. Because the sparse solid correction is decoupled from
+  the regular fluid update, the speedup over HOME-LBM grows from 6.2&times; to 32.5&times; as
+  the geometry becomes more intricate.</figcaption>
+</figure>
+
+<figure>
+<video controls muted loop playsinline preload="metadata">
+  <source src="videos/fluid_only_lowRe_highRe.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+<figcaption><strong>Fluid-only plumes at 1024<sup>3</sup>.</strong> 1.07 billion lattice cells simulated
+  with our 16-bit quantized solver at Re&nbsp;=&nbsp;40,960 (left) and Re&nbsp;=&nbsp;2,048,000 (right).
+  Moment storage is halved compared to the FP32 baseline while the solver stays stable at the
+  high Reynolds number.</figcaption>
+</figure>
+
+<figure>
+<video controls muted loop playsinline preload="metadata">
+  <source src="videos/deltawing_lfm_ours_openfoam.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+<figcaption><strong>Delta wing at 0&deg; and 20&deg; angle of attack.</strong> Leapfrog Flow Maps
+  [Sun et al. 2025] (left) and our solver (middle) on the same 256&nbsp;&times;&nbsp;128&nbsp;&times;&nbsp;128
+  grid with identical boundary conditions and visualization settings; an OpenFOAM LES result
+  on the same surface mesh, visualized with <em>Q</em>-criterion isosurfaces, is shown on the
+  right as a qualitative reference. Our solver is 5.2&times; faster than LFM in this
+  configuration.</figcaption>
+</figure>
+
+<h2 id="downloads">Downloads</h2>
+
+<ul>
+<li> <a href="arxiv_paper.pdf">Paper (arXiv preprint, 15 MB)</a></li>
+<li> <a href="">Code</a></li>
+</ul>
+
+<h2 id="bibtex">BibTeX</h2>
+
+<pre><code>@misc{chen2026quantized,
+  title={Quantized High-Performance High-Order Moment-Encoded LBM},
+  author={Chen, Yixin and Li, Wei and Levin, David I.W. and Wu, Kui},
+  year={2026},
+  eprint={XXXX.XXXXX},
+  archivePrefix={arXiv},
+  primaryClass={cs.GR}
+}
+</code></pre>
+
+<!--
+<h2 id="acknowledgements">Acknowledgements</h2>
+
+<p>TODO</p>
+-->
+
+</body>
+</html>
